@@ -5,6 +5,11 @@
 <h3>
     Please enter your secretary email to continue:
 </h3>
+
+{% if error %}
+  <p style="color: red;">{{ error }}</p>
+{% endif %}
+
 <form action="/login" method="post">
     <label for="email">Email:</label>
     <input type="email" name="email" id="" />
