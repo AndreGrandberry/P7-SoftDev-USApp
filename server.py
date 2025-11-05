@@ -1,4 +1,5 @@
 from flask import Flask, flash, redirect, render_template, request, session, url_for
+from werkzeug.exceptions import Unauthorized
 
 from provider import get_clubs, get_competitions
 
@@ -18,8 +19,10 @@ def login():
     """Use the session object to store the club information across requests"""
 
     clubs = get_clubs()
-    email = request.form["email"]
+    if "email" not in request.form or not request.form["email"]:
+        return render_template("index.html", error="Email is required."), 400
 
+    email = request.form["email"]
     club_list = [item for item in clubs if item["email"] == email]
     if not club_list:
         return render_template("index.html", error="Email not found. Please try again."), 401
@@ -33,6 +36,8 @@ def login():
 @app.route("/summary")
 def summary():
     """Custom "homepage" for logged in users"""
+    if "club" not in session:
+        return "Unauthorized", 401
 
     club = session["club"]
     competitions = get_competitions()
