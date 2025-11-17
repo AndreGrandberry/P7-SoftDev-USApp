@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Clubs and Points</h1>
+<ul>
+    {% for club in clubs %}
+        <li>{{ club.name }}: {{ club.points }} points</li>
+    {% endfor %}
+</ul>
+{% endblock %}

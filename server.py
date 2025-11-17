@@ -71,6 +71,12 @@ def book_spots():
     return render_template("welcome.html", club=club, competitions=competitions)
 
 
+@app.route("/clubs")
+def show_clubs():
+    clubs = get_clubs()
+    return render_template("clubs.html", clubs=clubs)
+
+
 @app.route("/logout")
 def logout():
     """We delete session data in order to log the user out"""
