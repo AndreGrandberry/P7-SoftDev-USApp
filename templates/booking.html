@@ -7,7 +7,7 @@
 </h5>
 <form action="/book" method="post">
     <input type="hidden" name="competition" value="{{competition['name']}}">
-    <label for="spots">How many spots?</label><input type="number" name="spots" id="input-spots" />
+    <label for="spots">How many spots?</label><input type="number" name="spots" id="input-spots" min="0" />
     <button type="submit">Book</button>
 </form>
 {% endblock %}
