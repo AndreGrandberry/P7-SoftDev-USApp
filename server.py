@@ -2,6 +2,8 @@ from flask import Flask, flash, redirect, render_template, request, session, url
 
 from provider import get_clubs, get_competitions
 
+from datetime import datetime
+
 app = Flask(__name__)
 # You should change the secret key in production!
 app.secret_key = "something_special"
@@ -64,6 +66,10 @@ def book_spots():
     ]
 
     competition = matching_comps[0]
+
+    if datetime.strptime(competition["date"], "%Y-%m-%d %H:%M:%S") < datetime.now():
+        return render_template("welcome.html", club=club, competitions=competitions,
+                               error="Cannot book spots for past competitions."), 403
 
     spots_required = int(request.form["spots"])
     competition["spotsAvailable"] = int(competition["spotsAvailable"]) - spots_required
