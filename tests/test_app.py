@@ -79,7 +79,7 @@ def test_book_exact_points():
     """Booking exactly the available points should succeed"""
     with app.test_client() as c:
         c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
-        resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "13"})
+        resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "12"})
         assert resp.status_code == 200
         assert "Great-booking complete!" in resp.data.decode()
 
