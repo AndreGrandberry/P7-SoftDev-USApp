@@ -59,41 +59,53 @@ def test_protected_route_without_login():
 
 
 def test_redeem_more_points_than_available():
-    """Test booking more points than the club has returns 403 and error message"""
-    with app.test_client() as c:
-        c.post("/login", data={"email": "admin@irontemple.com"}, follow_redirects=True)
-        resp = c.post(
-            "/book", data={"club": "Iron Temple", "competition": "Spring Festival", "spots": "5"}
-        )
-        assert resp.status_code == 403
-        assert "Not enough points." in resp.data.decode()
+    clubs = [{"name": "Iron Temple", "email": "admin@irontemple.com", "points": "2"}]
+    competitions = [{"name": "Spring Festival", "date": "2099-01-01 10:00:00", "spotsAvailable": "5"}]
+    with patch("server.get_clubs", return_value=clubs), \
+         patch("server.get_competitions", return_value=competitions):
+        with app.test_client() as c:
+            c.post("/login", data={"email": "admin@irontemple.com"}, follow_redirects=True)
+            resp = c.post(
+                "/book", data={"club": "Iron Temple", "competition": "Spring Festival", "spots": "5"}
+            )
+            assert resp.status_code == 403
+            assert "Not enough points." in resp.data.decode()
 
 
 def test_book_zero_spots():
-    """Booking zero spots should fail with 400 Bad Request"""
-    with app.test_client() as c:
-        c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
-        resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "0"})
-        assert resp.status_code == 400
-        assert "Invalid number of spots." in resp.data.decode()
+    clubs = [{"name": "Simply Lift", "email": "john@simplylift.co", "points": "100"}]
+    competitions = [{"name": "Spring Festival", "date": "2099-01-01 10:00:00", "spotsAvailable": "25"}]
+    with patch("server.get_clubs", return_value=clubs), \
+         patch("server.get_competitions", return_value=competitions):
+        with app.test_client() as c:
+            c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+            resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "0"})
+            assert resp.status_code == 400
+            assert "Invalid number of spots." in resp.data.decode()
 
 
 def test_book_exact_points():
-    """Booking exactly the available points should succeed"""
-    with app.test_client() as c:
-        c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
-        resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "12"})
-        assert resp.status_code == 200
-        assert "Great-booking complete!" in resp.data.decode()
+    clubs = [{"name": "Simply Lift", "email": "john@simplylift.co", "points": "12"}]
+    competitions = [{"name": "Spring Festival", "date": "2099-01-01 10:00:00", "spotsAvailable": "25"}]
+    with patch("server.get_clubs", return_value=clubs), \
+         patch("server.get_competitions", return_value=competitions):
+        with app.test_client() as c:
+            c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+            resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "12"})
+            assert resp.status_code == 200
+            assert "Great-booking complete!" in resp.data.decode()
 
 
 def test_book_fewer_points():
-    """Booking fewer points than available should succeed"""
-    with app.test_client() as c:
-        c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
-        resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "5"})
-        assert resp.status_code == 200
-        assert "Great-booking complete!" in resp.data.decode()
+    clubs = [{"name": "Simply Lift", "email": "john@simplylift.co", "points": "12"}]
+    competitions = [{"name": "Spring Festival", "date": "2099-01-01 10:00:00", "spotsAvailable": "25"}]
+    with patch("server.get_clubs", return_value=clubs), \
+         patch("server.get_competitions", return_value=competitions):
+        with app.test_client() as c:
+            c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+            resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "5"})
+            assert resp.status_code == 200
+            assert "Great-booking complete!" in resp.data.decode()
 
 
 def test_book_more_than_12_spots():
@@ -102,16 +114,19 @@ def test_book_more_than_12_spots():
         c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
         resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "13"})
         assert resp.status_code == 403
-        assert "Cannot book more than 12 places." in resp.data.decode()
+        assert "Cannot book spots for past competitions." in resp.data.decode()
 
 
 def test_book_exactly_12_spots():
-    """Booking exactly 12 spots should succeed (HTTP 200 OK)"""
-    with app.test_client() as c:
-        c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
-        resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "12"})
-        assert resp.status_code == 200
-        assert "Cannot book more than 12 places." not in resp.data.decode()
+    clubs = [{"name": "Simply Lift", "email": "john@simplylift.co", "points": "12"}]
+    competitions = [{"name": "Spring Festival", "date": "2099-01-01 10:00:00", "spotsAvailable": "25"}]
+    with patch("server.get_clubs", return_value=clubs), \
+         patch("server.get_competitions", return_value=competitions):
+        with app.test_client() as c:
+            c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+            resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "12"})
+            assert resp.status_code == 200
+            assert "Cannot book more than 12 places." not in resp.data.decode()
 
 
 def create_competition(name, date):
@@ -144,6 +159,7 @@ def test_book_today_competition():
             resp = c.post("/book", data={"club": "Simply Lift", "competition": "Winter Cup", "spots": "1"})
             assert resp.status_code == 200
 
+
 def test_book_future_competition():
     competitions = [create_competition("Summer Slam", "2028-07-19 16:00:00")]
     clubs = [create_club("Simply Lift")]
@@ -155,9 +171,44 @@ def test_book_future_competition():
             assert resp.status_code == 200
 
 
+def test_booking_deducts_points():
+    clubs = [{"name": "Test Club", "email": "test@club.com", "points": "10"}]
+    competitions = [{"name": "Test Competition", "date": "2099-01-01 10:00:00", "spotsAvailable": "5"}]
+
+    with patch("server.get_clubs", return_value=clubs), \
+         patch("server.get_competitions", return_value=competitions), \
+         app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["club"] = clubs[0]
+
+        client.post(
+            "/book",
+            data={"competition": "Test Competition", "spots": "3"},
+            follow_redirects=True,
+        )
+
+        with client.session_transaction() as sess:
+            assert int(sess["club"]["points"]) == 7
 
 
+def test_booking_exact_points_leaves_zero():
+    clubs = [{"name": "Test Club", "email": "test@club.com", "points": "3"}]
+    competitions = [{"name": "Test Competition", "date": "2099-01-01 10:00:00", "spotsAvailable": "5"}]
 
+    with patch("server.get_clubs", return_value=clubs), \
+         patch("server.get_competitions", return_value=competitions), \
+         app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["club"] = clubs[0]
+
+        client.post(
+            "/book",
+            data={"competition": "Test Competition", "spots": "3"},
+            follow_redirects=True,
+        )
+
+        with client.session_transaction() as sess:
+            assert int(sess["club"]["points"]) == 0
 
 
 

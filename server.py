@@ -67,11 +67,18 @@ def book(competition):
 @app.route("/book", methods=["POST"])
 def book_spots():
     """This page is only accessible through a POST request (form validation)"""
+    clubs = get_clubs()
+    competitions = get_competitions()
     club = session["club"]
+
 
     matching_comps = [
         comp for comp in competitions if comp["name"] == request.form["competition"]
     ]
+
+    if not matching_comps:
+        return render_template("welcome.html", club=club, competitions=competitions,
+                               error="Competition not found."), 404
 
     competition = matching_comps[0]
 
@@ -100,6 +107,16 @@ def book_spots():
     competition["spotsAvailable"] = int(competition["spotsAvailable"]) - spots_required
     club["points"] = str(club_points - spots_required)  # Update club points
     session["club"] = club  # Save updated club in session
+
+    for c in clubs:
+        if c["name"] == club["name"]:
+            c["points"] = club["points"]
+            break
+
+    for comp in competitions:
+        if comp["name"] == competition["name"]:
+            comp["spotsAvailable"] = competition["spotsAvailable"]
+            break
     flash("Great-booking complete!")
     return render_template("welcome.html", club=club, competitions=competitions)
 
