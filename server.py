@@ -1,5 +1,4 @@
 from flask import Flask, flash, redirect, render_template, request, session, url_for
-from werkzeug.exceptions import Unauthorized
 from datetime import datetime
 
 from provider import get_clubs, get_competitions
@@ -54,14 +53,11 @@ def book(competition):
     club = session["club"]
 
     matching_comps = [comp for comp in competitions if comp["name"] == competition]
-
-    found_competition = matching_comps[0]
-
-    if found_competition:
-        return render_template("booking.html", club=club, competition=found_competition)
-    else:
+    if not matching_comps:
         flash("Something went wrong-please try again")
         return redirect(url_for("summary"))
+    found_competition = matching_comps[0]
+    return render_template("booking.html", club=club, competition=found_competition)
 
 
 @app.route("/book", methods=["POST"])
@@ -75,10 +71,6 @@ def book_spots():
     matching_comps = [
         comp for comp in competitions if comp["name"] == request.form["competition"]
     ]
-
-    if not matching_comps:
-        return render_template("welcome.html", club=club, competitions=competitions,
-                               error="Competition not found."), 404
 
     competition = matching_comps[0]
 
@@ -119,6 +111,12 @@ def book_spots():
             break
     flash("Great-booking complete!")
     return render_template("welcome.html", club=club, competitions=competitions)
+
+
+@app.route("/clubs")
+def show_clubs():
+    clubs = get_clubs()
+    return render_template("clubs.html", clubs=clubs)
 
 
 @app.route("/logout")

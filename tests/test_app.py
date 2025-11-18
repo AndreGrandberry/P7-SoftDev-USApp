@@ -58,6 +58,28 @@ def test_protected_route_without_login():
         assert b"Unauthorized" in resp.data
 
 
+def test_book_competition_not_found():
+    clubs = [{"name": "Test Club", "email": "test@club.com", "points": "10"}]
+    competitions = [{"name": "Spring Festival", "date": "2099-01-01 10:00:00", "spotsAvailable": "5"}]
+    with patch("server.get_clubs", return_value=clubs), \
+         patch("server.get_competitions", return_value=competitions), \
+         app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["club"] = clubs[0]
+        resp = client.get("/book/Nonexistent Competition", follow_redirects=True)
+        assert b"Something went wrong-please try again" in resp.data
+
+
+def test_logout():
+    clubs = [{"name": "Test Club", "email": "test@club.com", "points": "10"}]
+    with patch("server.get_clubs", return_value=clubs), app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["club"] = clubs[0]
+        resp = client.get("/logout", follow_redirects=True)
+        assert resp.status_code == 200
+        assert b"Welcome to the GUDLFT Registration Portal!" in resp.data
+
+
 def test_redeem_more_points_than_available():
     clubs = [{"name": "Iron Temple", "email": "admin@irontemple.com", "points": "2"}]
     competitions = [{"name": "Spring Festival", "date": "2099-01-01 10:00:00", "spotsAvailable": "5"}]
@@ -110,11 +132,15 @@ def test_book_fewer_points():
 
 def test_book_more_than_12_spots():
     """Booking more than 12 spots should fail with 403 Forbidden"""
-    with app.test_client() as c:
-        c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
-        resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "13"})
-        assert resp.status_code == 403
-        assert "Cannot book spots for past competitions." in resp.data.decode()
+    clubs = [{"name": "Simply Lift", "email": "john@simplylift.co", "points": "12"}]
+    competitions = [{"name": "Spring Festival", "date": "2099-01-01 10:00:00", "spotsAvailable": "25"}]
+    with patch("server.get_clubs", return_value=clubs), \
+         patch("server.get_competitions", return_value=competitions):
+        with app.test_client() as c:
+            c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+            resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "13"})
+            assert resp.status_code == 403
+            assert "Cannot book more than 12 places." in resp.data.decode()
 
 
 def test_book_exactly_12_spots():
@@ -211,4 +237,28 @@ def test_booking_exact_points_leaves_zero():
             assert int(sess["club"]["points"]) == 0
 
 
+def test_clubs_page_loads():
+    with app.test_client() as client:
+        resp = client.get("/clubs")
+        assert resp.status_code == 200
 
+
+def test_clubs_page_displays_clubs():
+    clubs = [
+        {"name": "Alpha Club", "email": "alpha@club.com", "points": "10"},
+        {"name": "Beta Club", "email": "beta@club.com", "points": "5"},
+    ]
+    with patch("server.get_clubs", return_value=clubs), app.test_client() as client:
+        resp = client.get("/clubs")
+        data = resp.data.decode()
+        assert "Alpha Club" in data
+        assert "10" in data
+        assert "Beta Club" in data
+        assert "5" in data
+
+
+def test_clubs_page_no_clubs():
+    with patch("server.get_clubs", return_value=[]), app.test_client() as client:
+        resp = client.get("/clubs")
+        data = resp.data.decode()
+        assert "Clubs and Points" in data
