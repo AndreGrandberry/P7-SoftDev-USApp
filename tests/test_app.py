@@ -1,5 +1,4 @@
 from flask import request
-
 from server import app
 
 
@@ -55,12 +54,13 @@ def test_protected_route_without_login():
         assert resp.status_code == 401
         assert b"Unauthorized" in resp.data
 
+
 def test_redeem_more_points_than_available():
     """Test booking more points than the club has returns 403 and error message"""
     with app.test_client() as c:
-        c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+        c.post("/login", data={"email": "admin@irontemple.com"}, follow_redirects=True)
         resp = c.post(
-            "/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "20"}
+            "/book", data={"club": "Iron Temple", "competition": "Spring Festival", "spots": "5"}
         )
         assert resp.status_code == 403
         assert "Not enough points." in resp.data.decode()
@@ -91,7 +91,6 @@ def test_book_fewer_points():
         resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "5"})
         assert resp.status_code == 200
         assert "Great-booking complete!" in resp.data.decode()
-
 
 
 def test_book_more_than_12_spots():

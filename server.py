@@ -1,11 +1,15 @@
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 from werkzeug.exceptions import Unauthorized
+from datetime import datetime
 
 from provider import get_clubs, get_competitions
 
 app = Flask(__name__)
 # You should change the secret key in production!
 app.secret_key = "something_special"
+
+clubs = get_clubs()
+competitions = get_competitions()
 
 
 @app.route("/")
@@ -40,7 +44,6 @@ def summary():
         return "Unauthorized", 401
 
     club = session["club"]
-    competitions = get_competitions()
 
     return render_template("welcome.html", club=club, competitions=competitions)
 
@@ -50,7 +53,6 @@ def book(competition):
     """Book spots in a competition page"""
     club = session["club"]
 
-    competitions = get_competitions()
     matching_comps = [comp for comp in competitions if comp["name"] == competition]
 
     found_competition = matching_comps[0]
@@ -66,7 +68,6 @@ def book(competition):
 def book_spots():
     """This page is only accessible through a POST request (form validation)"""
     club = session["club"]
-    competitions = get_competitions()
 
     matching_comps = [
         comp for comp in competitions if comp["name"] == request.form["competition"]
@@ -74,22 +75,31 @@ def book_spots():
 
     competition = matching_comps[0]
 
+    try:
+        comp_date = datetime.strptime(competition["date"], "%Y-%m-%d %H:%M:%S")
+    except (KeyError, ValueError):
+        return render_template("welcome.html", club=club, competitions=competitions,
+                               error="Competition date is missing or invalid."), 403
+
+    if comp_date < datetime.now():
+        return render_template("welcome.html", club=club, competitions=competitions,
+                               error="Cannot book spots for past competitions."), 403
+
     spots_required = int(request.form["spots"])
     club_points = int(club["points"])
-
-    if spots_required > club_points:
-        return render_template("welcome.html", club=club, competitions=competitions, error="Not enough points."), 403
 
     if spots_required <= 0:
         return render_template("welcome.html", club=club, competitions=competitions,
                                error="Invalid number of spots."), 400
-
-
     if spots_required > 12:
         return render_template("welcome.html", club=club, competitions=competitions,
                                error="Cannot book more than 12 places."), 403
+    if spots_required > club_points:
+        return render_template("welcome.html", club=club, competitions=competitions, error="Not enough points."), 403
 
     competition["spotsAvailable"] = int(competition["spotsAvailable"]) - spots_required
+    club["points"] = str(club_points - spots_required)  # Update club points
+    session["club"] = club  # Save updated club in session
     flash("Great-booking complete!")
     return render_template("welcome.html", club=club, competitions=competitions)
 
