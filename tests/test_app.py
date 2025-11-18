@@ -1,5 +1,8 @@
 from flask import request
+from unittest.mock import patch
 from server import app
+from datetime import datetime, timedelta
+from provider import get_clubs, get_competitions
 
 
 def test_homepage():
@@ -109,3 +112,52 @@ def test_book_exactly_12_spots():
         resp = c.post("/book", data={"club": "Simply Lift", "competition": "Spring Festival", "spots": "12"})
         assert resp.status_code == 200
         assert "Cannot book more than 12 places." not in resp.data.decode()
+
+
+def create_competition(name, date):
+    return {"name": name, "date": date, "spotsAvailable": "25"}
+
+
+def create_club(name, email="john@simplylift.co", points="100"):
+    return {"name": name, "email": email, "points": points}
+
+
+def test_book_past_competition():
+    past_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+    competitions = [create_competition("Fall Classic", past_date)]
+    clubs = [create_club("Simply Lift")]
+    with patch("provider.get_competitions", return_value=competitions), \
+         patch("provider.get_clubs", return_value=clubs):
+        with app.test_client() as c:
+            c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+            resp = c.post("/book", data={"club": "Simply Lift", "competition": "Fall Classic", "spots": "1"})
+            assert resp.status_code == 403
+
+
+def test_book_today_competition():
+    competitions = [create_competition("Winter Cup", "2025-11-18 20:00:00")]
+    clubs = [create_club("Simply Lift")]
+    with patch("server.get_competitions", return_value=competitions), \
+         patch("server.get_clubs", return_value=clubs):
+        with app.test_client() as c:
+            c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+            resp = c.post("/book", data={"club": "Simply Lift", "competition": "Winter Cup", "spots": "1"})
+            assert resp.status_code == 200
+
+def test_book_future_competition():
+    competitions = [create_competition("Summer Slam", "2028-07-19 16:00:00")]
+    clubs = [create_club("Simply Lift")]
+    with patch("server.get_competitions", return_value=competitions), \
+         patch("server.get_clubs", return_value=clubs):
+        with app.test_client() as c:
+            c.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+            resp = c.post("/book", data={"club": "Simply Lift", "competition": "Summer Slam", "spots": "1"})
+            assert resp.status_code == 200
+
+
+
+
+
+
+
+
