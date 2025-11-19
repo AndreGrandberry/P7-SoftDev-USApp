@@ -1,4 +1,6 @@
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import (
+    Flask, flash, redirect, render_template, request, session, url_for
+)
 from datetime import datetime
 
 from provider import get_clubs, get_competitions
@@ -28,8 +30,9 @@ def login():
     email = request.form["email"]
     club_list = [item for item in clubs if item["email"] == email]
     if not club_list:
-        return render_template("index.html", error="Email not found. Please try again."), 401
-
+        return render_template(
+            "index.html", error="Email not found. Please try again."
+        ), 401
     club = club_list[0]
     session["club"] = club
 
@@ -44,7 +47,9 @@ def summary():
 
     club = session["club"]
 
-    return render_template("welcome.html", club=club, competitions=competitions)
+    return render_template(
+        "welcome.html", club=club, competitions=competitions
+    )
 
 
 @app.route("/book/<competition>")
@@ -52,12 +57,16 @@ def book(competition):
     """Book spots in a competition page"""
     club = session["club"]
 
-    matching_comps = [comp for comp in competitions if comp["name"] == competition]
+    matching_comps = [
+        comp for comp in competitions
+        if comp["name"] == competition]
+
     if not matching_comps:
         flash("Something went wrong-please try again")
         return redirect(url_for("summary"))
     found_competition = matching_comps[0]
-    return render_template("booking.html", club=club, competition=found_competition)
+    return render_template(
+        "booking.html", club=club, competition=found_competition)
 
 
 @app.route("/book", methods=["POST"])
@@ -67,9 +76,9 @@ def book_spots():
     competitions = get_competitions()
     club = session["club"]
 
-
     matching_comps = [
-        comp for comp in competitions if comp["name"] == request.form["competition"]
+        comp for comp in competitions
+        if comp["name"] == request.form["competition"]
     ]
 
     competition = matching_comps[0]
@@ -77,26 +86,58 @@ def book_spots():
     try:
         comp_date = datetime.strptime(competition["date"], "%Y-%m-%d %H:%M:%S")
     except (KeyError, ValueError):
-        return render_template("welcome.html", club=club, competitions=competitions,
-                               error="Competition date is missing or invalid."), 403
+        return render_template(
+            "welcome.html",
+            club=club,
+            competitions=competitions,
+            error="Competition date is missing or invalid."
+        ), 403
 
     if comp_date < datetime.now():
-        return render_template("welcome.html", club=club, competitions=competitions,
-                               error="Cannot book spots for past competitions."), 403
+        return render_template(
+            "welcome.html",
+            club=club,
+            competitions=competitions,
+            error="Cannot book spots for past competitions."
+        ), 403
 
     spots_required = int(request.form["spots"])
     club_points = int(club["points"])
 
     if spots_required <= 0:
-        return render_template("welcome.html", club=club, competitions=competitions,
-                               error="Invalid number of spots."), 400
-    if spots_required > 12:
-        return render_template("welcome.html", club=club, competitions=competitions,
-                               error="Cannot book more than 12 places."), 403
-    if spots_required > club_points:
-        return render_template("welcome.html", club=club, competitions=competitions, error="Not enough points."), 403
+        return render_template(
+            "welcome.html",
+            club=club,
+            competitions=competitions,
+            error="Invalid number of spots."
+        ), 400
 
-    competition["spotsAvailable"] = int(competition["spotsAvailable"]) - spots_required
+    if spots_required > 12:
+        return render_template(
+            "welcome.html",
+            club=club,
+            competitions=competitions,
+            error="Cannot book more than 12 places."
+        ), 403
+
+    if spots_required > club_points:
+        return render_template(
+            "welcome.html",
+            club=club,
+            competitions=competitions,
+            error="Not enough points."
+        ), 403
+
+    if spots_required > int(competition["spotsAvailable"]):
+        return render_template(
+            "welcome.html",
+            club=club,
+            competitions=competitions,
+            error="Not enough spots available."
+        ), 403
+
+    competition["spotsAvailable"] = (
+            int(competition["spotsAvailable"]) - spots_required)
     club["points"] = str(club_points - spots_required)  # Update club points
     session["club"] = club  # Save updated club in session
 
@@ -110,7 +151,8 @@ def book_spots():
             comp["spotsAvailable"] = competition["spotsAvailable"]
             break
     flash("Great-booking complete!")
-    return render_template("welcome.html", club=club, competitions=competitions)
+    return render_template(
+        "welcome.html", club=club, competitions=competitions)
 
 
 @app.route("/clubs")

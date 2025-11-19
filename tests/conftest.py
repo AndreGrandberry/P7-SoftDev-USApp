@@ -4,9 +4,21 @@ import pytest
 def mock_clubs():
     """Static data to mock clubs"""
     return [
-        {"name": "Simply Lift", "email": "john@simplylift.co", "points": "13"},
-        {"name": "Iron Temple", "email": "admin@irontemple.com", "points": "4"},
-        {"name": "She Lifts", "email": "kate@shelifts.co.uk", "points": "12"},
+        {
+            "name": "Simply Lift",
+            "email": "john@simplylift.co",
+            "points": "13",
+        },
+        {
+            "name": "Iron Temple",
+            "email": "admin@irontemple.com",
+            "points": "4",
+        },
+        {
+            "name": "She Lifts",
+            "email": "kate@shelifts.co.uk",
+            "points": "12",
+        },
     ]
 
 
@@ -31,7 +43,8 @@ def mock_data_provider(monkeypatch):
     """
     This fixture will be automatically used in test functions.
 
-    We patch `server.get_clubs`, because that's where the get_clubs function is used.
+    We patch `server.get_clubs`, because that's
+    where the get_clubs function is used.
     """
 
     monkeypatch.setattr("server.get_clubs", mock_clubs)
